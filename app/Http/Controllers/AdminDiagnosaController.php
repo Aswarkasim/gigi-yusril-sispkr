@@ -86,9 +86,16 @@ class AdminDiagnosaController extends Controller
     function delete()
     {
         $diagnosa_id = request('diagnosa_id');
-        // $diagnosa = Diagnosa::find($diagnosa_id);
-        // $penyakit_id = $diagnosa->penyakit_id;11
-        DB::table('diagnosas')->delete($diagnosa_id);
+        $diagnosa = Diagnosa::find($diagnosa_id);
+        $gejala_id = $diagnosa->gejala_id;
+        $pasien_id = $diagnosa->pasien_id;
+
+        $diagnosaBygejala = Diagnosa::where('gejala_id', $gejala_id)->where('pasien_id', $pasien_id)->get();
+
+        foreach ($diagnosaBygejala as $d) {
+            $d->delete($d);
+        }
+        // DB::table('diagnosas')->delete($diagnosa_id);
         return redirect('/admin/diagnosa/periksa');
     }
 
@@ -98,6 +105,24 @@ class AdminDiagnosaController extends Controller
         $penyakit = Penyakit::all();
         $hasil = 0;
         $penyakit_id = '';
+
+        $role = Role::all();
+        foreach ($role as $r) {
+            $diagnosa = Diagnosa::where('pasien_id', $pasien_id)->wherePenyakitId($r->penyakit_id)->whereGejalaId($r->id)->first();
+            if ($diagnosa == null) {
+                $data = [
+                    'pasien_id' => $pasien_id,
+                    'penyakit_id' => $r->penyakit_id,
+                    'gejala_id'  => $r->gejala_id,
+                    'nilai_cf'  => 0,
+                    'cf_hasil'  => 0,
+                ];
+                Diagnosa::create($data);
+            }
+        }
+
+
+
         foreach ($penyakit as $p) {
             $diagnosa = Diagnosa::wherePenyakitId($p->id)->wherePasienId($pasien_id)->get();
             $diagnosa_hasil = $this->hitung_cf($diagnosa);
